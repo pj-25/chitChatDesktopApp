@@ -1,6 +1,5 @@
 package chitChat.chitChatDownloader;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,14 +26,33 @@ public class DownloadChitChat extends Application {
     private ProgressBar progressBar = new ProgressBar();
     private Label status;
     private final String DOWNLOAD_LINK = "https://github.com/pj-25/codeholic/raw/main/chitChatAppV2.jar";
+    private Button downloadBtn;
+
+    private boolean isPaused = false;
+    private final Object pauseLock = new Object();
 
     @Override
     public void start(Stage primaryStage){
-        Button downloadBtn = new Button("Download");
+        downloadBtn = new Button("Download");
         downloadBtn.setOnAction(e->{
             try{
-                download();
-                downloadBtn.setDisable(true);
+                String btnStatus = downloadBtn.getText();
+                if(btnStatus.equals("Download") || btnStatus.equals("Resume")){
+                    if(!isPaused){
+                        download();
+                    }
+                    else{
+                        resume();
+                    }
+                    downloadBtn.setText("Pause");
+                }
+                else if(btnStatus.equals("Pause")){
+                    downloadBtn.setText("Resume");
+                    isPaused = true;
+                }
+                else{
+                    launchChitChat();
+                }
             }
             catch (IOException x){
                 status.setText("Unable to connect with Server :(");
@@ -82,6 +100,22 @@ public class DownloadChitChat extends Application {
         }
     }
 
+    public void resume(){
+        synchronized (pauseLock){
+            isPaused = false;
+            pauseLock.notifyAll();
+        }
+    }
+
+    public void launchChitChat() {
+        try{
+            Process runChitChat = Runtime.getRuntime().exec("java -jar chitChatApp.jar");
+        }
+        catch (IOException e){
+            status.setText("Unable to launch ChitChat :(");
+        }
+    }
+
     public void download() throws IOException{
         progressBar.setProgress(0);
 
@@ -98,21 +132,28 @@ public class DownloadChitChat extends Application {
 
         new Thread(()->{
             try{
+                isPaused = false;
                 float dsize = 0;
                 byte []data = new byte[1024];
                 int fp;
                 while((fp=inStream.read(data, 0,1024))>=0){
+                    synchronized (pauseLock){
+                        while(isPaused){
+                            pauseLock.wait();
+                        }
+                    }
                     fout.write(data, 0, fp);
                     dsize += fp;
                     progressBar.setProgress(dsize / (TOTAL_SIZE));
                 }
-                System.out.println(progressBar.getProgress());
-                System.out.println(dsize);
                 inStream.close();
                 fout.close();
-                Platform.runLater(()-> status.setText("Downloaded successfully!"));
+                Platform.runLater(()-> {
+                    downloadBtn.setText("Launch");
+                    status.setText("Downloaded successfully!");
+                });
             }
-            catch (IOException x){
+            catch (IOException | InterruptedException x){
                 status.setText("Error in download :(");
             }
         }).start();
