@@ -15,6 +15,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
@@ -34,6 +35,8 @@ public class DownloadChitChat extends Application {
     @Override
     public void start(Stage primaryStage){
         downloadBtn = new Button("Download");
+        downloadBtn.setStyle("-fx-background-color: #0000FF ;");
+        downloadBtn.setTextFill(Color.WHITE);
         downloadBtn.setOnAction(e->{
             try{
                 String btnStatus = downloadBtn.getText();
